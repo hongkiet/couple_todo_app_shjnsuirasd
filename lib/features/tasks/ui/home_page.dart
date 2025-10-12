@@ -41,6 +41,11 @@ class _HomePageState extends State<HomePage> {
           title: const Text('Shared Tasks'),
           actions: [
             IconButton(
+              icon: const Icon(Icons.calendar_view_week),
+              onPressed: () => context.go('/weekly'),
+              tooltip: 'Todo Tuần',
+            ),
+            IconButton(
               icon: const Icon(Icons.logout),
               onPressed: () async {
                 await Supabase.instance.client.auth.signOut();
@@ -51,27 +56,7 @@ class _HomePageState extends State<HomePage> {
         ),
         body: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: inputCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Add a task...',
-                      ),
-                      onSubmitted: (_) => _add(context),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: () => _add(context),
-                    child: const Text('Add'),
-                  ),
-                ],
-              ),
-            ),
+            _TaskInputField(inputCtrl: inputCtrl),
             const Divider(height: 0),
             Expanded(
               child: BlocBuilder<TaskBloc, TaskState>(
@@ -115,6 +100,35 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _TaskInputField extends StatelessWidget {
+  final TextEditingController inputCtrl;
+
+  const _TaskInputField({required this.inputCtrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: inputCtrl,
+              decoration: const InputDecoration(hintText: 'Add a task...'),
+              onSubmitted: (_) => _add(context),
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: () => _add(context),
+            child: const Text('Add'),
+          ),
+        ],
       ),
     );
   }

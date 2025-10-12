@@ -35,7 +35,6 @@ class CoupleRepository {
           'role': 'owner',
         });
 
-
         debugPrint('[createCouple] OK code=${couple['code']}');
         return couple['code'] as String;
       } on PostgrestException catch (e) {
@@ -58,7 +57,9 @@ class CoupleRepository {
       }
     }
 
-    throw Exception('Cannot create couple after retries. Last error: $lastError');
+    throw Exception(
+      'Cannot create couple after retries. Last error: $lastError',
+    );
   }
 
   Future<String> joinByCode(String code) async {

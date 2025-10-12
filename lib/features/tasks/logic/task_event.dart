@@ -43,3 +43,7 @@ class DeleteTask extends TaskEvent {
   @override
   List<Object?> get props => [id];
 }
+
+class RefreshTasks extends TaskEvent {
+  const RefreshTasks();
+}
