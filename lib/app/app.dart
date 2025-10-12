@@ -3,12 +3,14 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/auth/auth_gate.dart';
 import '../features/tasks/ui/home_page.dart';
+import '../features/tasks/ui/weekly_todo_page.dart';
 import '../features/couple/pairing_page.dart';
 
 final _router = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (_, __) => const AuthGate()),
     GoRoute(path: '/home', builder: (_, __) => const HomePage()),
+    GoRoute(path: '/weekly', builder: (_, __) => const WeeklyTodoPage()),
     GoRoute(path: '/pair', builder: (_, __) => const PairingPage()),
   ],
 );
@@ -22,6 +24,7 @@ class App extends StatelessWidget {
       title: 'Couple To-Do',
       routerConfig: _router,
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.pink),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

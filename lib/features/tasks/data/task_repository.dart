@@ -9,7 +9,7 @@ class TaskRepository {
         .from('tasks')
         .stream(primaryKey: ['id'])
         .eq('couple_id', coupleId)
-        .order('created_at')
+        .order('created_at', ascending: true)
         .map((rows) => rows.map((e) => Task.fromMap(e)).toList());
   }
 
@@ -32,6 +32,18 @@ class TaskRepository {
   }
 
   Future<void> remove(String id) async {
-    await _supa.from('tasks').delete().eq('id', id);
+    print('TaskRepository: Attempting to delete task with id: $id');
+    final result = await _supa.from('tasks').delete().eq('id', id);
+    print('TaskRepository: Delete result: $result');
+  }
+
+  Future<List<Task>> getTasks(String coupleId) async {
+    final response = await _supa
+        .from('tasks')
+        .select()
+        .eq('couple_id', coupleId)
+        .order('created_at', ascending: true);
+
+    return response.map((e) => Task.fromMap(e)).toList();
   }
 }

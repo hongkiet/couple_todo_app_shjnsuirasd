@@ -6,20 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/env.dart';
 import 'app/app.dart';
 
-
 Future<void> main() async {
-WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
+  await Supabase.initialize(url: Env.supabaseUrl, anonKey: Env.supabaseAnonKey);
 
-await Supabase.initialize(
-url: Env.supabaseUrl,
-anonKey: Env.supabaseAnonKey,
-);
+  final dir = await getApplicationDocumentsDirectory();
+  HydratedBloc.storage = await HydratedStorage.build(storageDirectory: dir);
 
-
-final dir = await getApplicationDocumentsDirectory();
-HydratedBloc.storage = await HydratedStorage.build(storageDirectory: dir);
-
-
-runApp(const App());
+  runApp(const App());
 }
