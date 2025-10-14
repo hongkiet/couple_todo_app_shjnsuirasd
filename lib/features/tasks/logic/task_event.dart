@@ -4,8 +4,8 @@ enum TaskStatus { loading, ready }
 
 abstract class TaskEvent extends Equatable {
   const TaskEvent();
-  factory TaskEvent.bind() = _BindStream;
-  factory TaskEvent.onTasks(List<Task> tasks) = _OnTasks;
+  const factory TaskEvent.bind() = _BindStream;
+  const factory TaskEvent.onTasks(List<Task> tasks) = _OnTasks;
 
   @override
   List<Object?> get props => [];

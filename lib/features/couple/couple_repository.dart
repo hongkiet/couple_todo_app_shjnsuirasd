@@ -44,7 +44,7 @@ class CoupleRepository {
 
         // Nếu trùng code (unique_violation 23505) thì thử lại vòng sau
         if (e.code?.trim() == '23505' ||
-            e.message?.toLowerCase().contains('duplicate') == true) {
+            e.message.toLowerCase().contains('duplicate') == true) {
           continue;
         }
         // Lỗi khác: dừng luôn để thấy message thật
@@ -67,7 +67,7 @@ class CoupleRepository {
       final response = await _supa.rpc('join_couple', params: {'p_code': code});
       return response as String; // couple_id
     } catch (e) {
-      throw e;
+      rethrow;
     }
   }
 
@@ -80,7 +80,7 @@ class CoupleRepository {
           .maybeSingle();
       return response?['couple_id'] as String?;
     } catch (e) {
-      throw e;
+      rethrow;
     }
   }
 
