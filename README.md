@@ -1,16 +1,17 @@
-# couple_todo_app_shjn
+### Weekly Couple To-do App  
+**Personal Project**  
+**10/2025 – Present (In Progress)**  
 
-A new Flutter project.
+**Description:**  
+Building a cross-platform Flutter app that allows couples to share weekly to-do lists in real time.  
+Currently developing core features such as user authentication, couple pairing, and real-time task synchronization using Supabase.  
+Focused on applying clean Flutter architecture (BLoC + Repository) and secure Row-Level Security (RLS) on PostgreSQL.
 
-## Getting Started
+**Technologies:**  
+Flutter (Dart), Supabase (Auth, Postgres, Realtime), BLoC, Go Router, Hydrated BLoC, PostgreSQL, Git  
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+**Highlights:**  
+- Implemented **pairing system** using unique couple code.  
+- Set up **Supabase Realtime** for live task updates between partners.  
+- Designed **secure database schema & policies** with RLS.  
+- Upcoming features: offline-first mode, local notifications, recurring tasks.
