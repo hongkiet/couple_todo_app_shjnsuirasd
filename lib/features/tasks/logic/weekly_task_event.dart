@@ -4,8 +4,8 @@ enum WeeklyTaskStatus { loading, ready }
 
 abstract class WeeklyTaskEvent extends Equatable {
   const WeeklyTaskEvent();
-  factory WeeklyTaskEvent.bind() = _BindStream;
-  factory WeeklyTaskEvent.onTasks(List<WeeklyTask> tasks) = _OnTasks;
+  const factory WeeklyTaskEvent.bind() = _BindStream;
+  const factory WeeklyTaskEvent.onTasks(List<WeeklyTask> tasks) = _OnTasks;
 
   @override
   List<Object?> get props => [];

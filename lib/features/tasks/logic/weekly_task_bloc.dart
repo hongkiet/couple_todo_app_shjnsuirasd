@@ -18,14 +18,14 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
     on<_BindStream>((e, emit) async {
       await _sub?.cancel();
       _refreshTimer?.cancel();
-      print('WeeklyTaskBloc: Binding stream for coupleId: $coupleId');
+      // print('WeeklyTaskBloc: Binding stream for coupleId: $coupleId');
 
       // Load data ngay lập tức
       add(const RefreshWeeklyTasks());
 
       // Setup timer để refresh định kỳ mỗi 5 giây
       _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-        print('WeeklyTaskBloc: Periodic refresh...');
+        // print('WeeklyTaskBloc: Periodic refresh...');
         add(const RefreshWeeklyTasks());
       });
 
@@ -35,28 +35,28 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
             .watchCurrentWeekTasks(coupleId)
             .listen(
               (tasks) {
-                print('WeeklyTaskBloc: Stream received ${tasks.length} tasks');
+                // print('WeeklyTaskBloc: Stream received ${tasks.length} tasks');
                 add(WeeklyTaskEvent.onTasks(tasks));
               },
               onError: (error) {
-                print('WeeklyTaskBloc Stream error: $error');
+                // print('WeeklyTaskBloc Stream error: $error');
                 // Fallback: load data manually
                 add(const RefreshWeeklyTasks());
               },
             );
       } catch (error) {
-        print(
-          'WeeklyTaskBloc: Stream failed, falling back to manual load: $error',
-        );
+        // print(
+        //   'WeeklyTaskBloc: Stream failed, falling back to manual load: $error',
+        // );
         // Fallback: load data manually
         add(const RefreshWeeklyTasks());
       }
     });
 
     on<_OnTasks>((e, emit) {
-      print(
-        'WeeklyTaskBloc: Received ${e.tasks.length} weekly tasks from stream',
-      );
+      // print(
+      //   'WeeklyTaskBloc: Received ${e.tasks.length} weekly tasks from stream',
+      // );
       final group = WeeklyTasksGroup.fromTasks(e.tasks);
       emit(
         state.copyWith(
@@ -78,10 +78,10 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
         );
 
         // Force refresh sau khi thêm task
-        print('WeeklyTaskBloc: Task added, refreshing...');
+        // print('WeeklyTaskBloc: Task added, refreshing...');
         add(const RefreshWeeklyTasks());
       } catch (error) {
-        print('Error adding weekly task: $error');
+        // print('Error adding weekly task: $error');
       }
     });
 
@@ -91,20 +91,20 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
         // Force refresh sau khi toggle
         add(const RefreshWeeklyTasks());
       } catch (error) {
-        print('Error toggling weekly task: $error');
+        // print('Error toggling weekly task: $error');
       }
     });
 
     on<DeleteWeeklyTask>((e, emit) async {
       try {
-        print('WeeklyTaskBloc: Deleting weekly task with id: ${e.id}');
+        // print('WeeklyTaskBloc: Deleting weekly task with id: ${e.id}');
         await repo.removeTask(e.id);
         print('WeeklyTaskBloc: Weekly task deleted successfully');
 
         // Manually refresh tasks to ensure UI updates
         add(const RefreshWeeklyTasks());
       } catch (error) {
-        print('Error deleting weekly task: $error');
+        // print('Error deleting weekly task: $error');
       }
     });
 
@@ -112,13 +112,13 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
       try {
         await repo.updateTask(id: e.id, title: e.title, note: e.note);
       } catch (error) {
-        print('Error updating weekly task: $error');
+        // print('Error updating weekly task: $error');
       }
     });
 
     on<RefreshWeeklyTasks>((e, emit) async {
       try {
-        print('WeeklyTaskBloc: Refreshing weekly tasks manually');
+        // print('WeeklyTaskBloc: Refreshing weekly tasks manually');
         final tasks = await repo.getCurrentWeekTasks(coupleId);
         print('WeeklyTaskBloc: Refreshed ${tasks.length} weekly tasks');
         final group = WeeklyTasksGroup.fromTasks(tasks);
@@ -130,13 +130,13 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
           ),
         );
       } catch (error) {
-        print('Error refreshing weekly tasks: $error');
+        // print('Error refreshing weekly tasks: $error');
       }
     });
 
     on<ChangeWeek>((e, emit) async {
       try {
-        print('WeeklyTaskBloc: Changing to week ${e.weekStart}');
+        // print('WeeklyTaskBloc: Changing to week ${e.weekStart}');
         await _sub?.cancel();
 
         _sub = repo
@@ -144,13 +144,13 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
             .listen(
               (tasks) => add(WeeklyTaskEvent.onTasks(tasks)),
               onError: (error) {
-                print('WeeklyTaskBloc Stream error: $error');
+                // print('WeeklyTaskBloc Stream error: $error');
               },
             );
 
         emit(state.copyWith(currentWeekStart: e.weekStart));
       } catch (error) {
-        print('Error changing week: $error');
+        // print('Error changing week: $error');
       }
     });
 
