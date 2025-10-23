@@ -67,7 +67,7 @@ class _RouteDecider extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         if (snapshot.hasError) {
           debugPrint('[AuthGate] FutureBuilder error: ${snapshot.error}');
           // Nếu có lỗi, chuyển về pairing page
@@ -76,13 +76,13 @@ class _RouteDecider extends StatelessWidget {
           );
           return const SizedBox.shrink();
         }
-        
+
         if (!snapshot.hasData) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         if (snapshot.data == true) {
           WidgetsBinding.instance.addPostFrameCallback(
             (_) => context.go('/home'),

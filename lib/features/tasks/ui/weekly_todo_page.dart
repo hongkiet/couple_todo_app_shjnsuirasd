@@ -93,7 +93,7 @@ class _WeeklyTodoPageState extends State<WeeklyTodoPage> {
           WeeklyTaskBloc(repo: WeeklyTaskRepository(), coupleId: coupleId!),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Todo Tuần'),
+          title: const Text('CoupleS'),
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
