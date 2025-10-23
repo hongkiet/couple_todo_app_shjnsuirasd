@@ -80,13 +80,12 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: const Text('Todo Tuần'),
+      title: const Text('CoupleS'),
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),
-          onPressed: () => context.read<WeeklyTaskBloc>().add(
-            const RefreshWeeklyTasks(),
-          ),
+          onPressed: () =>
+              context.read<WeeklyTaskBloc>().add(const RefreshWeeklyTasks()),
           tooltip: 'Refresh',
         ),
         IconButton(
@@ -491,9 +490,7 @@ class _TaskTileState extends State<_TaskTile> {
         style: TextStyle(
           decoration: widget.task.isDone ? TextDecoration.lineThrough : null,
           color: widget.task.isDone ? Colors.grey : null,
-          fontWeight: widget.task.isDone
-              ? FontWeight.normal
-              : FontWeight.w500,
+          fontWeight: widget.task.isDone ? FontWeight.normal : FontWeight.w500,
         ),
       ),
       subtitle: widget.task.note != null && widget.task.note!.isNotEmpty

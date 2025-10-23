@@ -20,19 +20,17 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
       _refreshTimer?.cancel();
       // print('WeeklyTaskBloc: Binding stream for coupleId: $coupleId');
 
-      // Load data ngay lập tức
+      // Khởi tạo với tuần hiện tại
+      final currentWeek = _getCurrentWeekStart();
+      emit(state.copyWith(currentWeekStart: currentWeek));
+
+      // Load data ngay lập tức cho tuần hiện tại
       add(const RefreshWeeklyTasks());
 
-      // Setup timer để refresh định kỳ mỗi 5 giây
-      _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-        // print('WeeklyTaskBloc: Periodic refresh...');
-        add(const RefreshWeeklyTasks());
-      });
-
-      // Thử cách 1: Sử dụng stream
+      // Sử dụng stream để lắng nghe thay đổi từ database
       try {
         _sub = repo
-            .watchCurrentWeekTasks(coupleId)
+            .watchWeekTasks(coupleId, currentWeek)
             .listen(
               (tasks) {
                 // print('WeeklyTaskBloc: Stream received ${tasks.length} tasks');
@@ -68,6 +66,27 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
     });
 
     on<AddWeeklyTask>((e, emit) async {
+      // Tạo task tạm thời với optimistic update
+      final tempTask = WeeklyTask(
+        id: 'temp_${DateTime.now().millisecondsSinceEpoch}', // ID tạm thời
+        coupleId: coupleId,
+        title: e.title,
+        note: e.note,
+        weekStart: e.weekStart,
+        weekEnd: e.weekStart.add(const Duration(days: 6)),
+        dayOfWeek: e.dayOfWeek,
+        isDone: false,
+        createdBy: 'temp', // Sẽ được cập nhật từ API response
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      // Thêm task tạm thời vào UI ngay lập tức
+      final updatedTasks = [...state.tasks, tempTask];
+      final updatedGroup = WeeklyTasksGroup.fromTasks(updatedTasks);
+      emit(state.copyWith(tasks: updatedTasks, tasksGroup: updatedGroup));
+
+      // Sau đó gọi API để thêm task thật
       try {
         await repo.addTask(
           coupleId: coupleId,
@@ -76,50 +95,116 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
           weekStart: e.weekStart,
           dayOfWeek: e.dayOfWeek,
         );
-
-        // Force refresh sau khi thêm task
-        // print('WeeklyTaskBloc: Task added, refreshing...');
-        add(const RefreshWeeklyTasks());
+        // print('WeeklyTaskBloc: Task added successfully');
       } catch (error) {
+        // Nếu API thất bại, xóa task tạm thời
         // print('Error adding weekly task: $error');
+        final rollbackTasks = state.tasks
+            .where((task) => task.id != tempTask.id)
+            .toList();
+        final rollbackGroup = WeeklyTasksGroup.fromTasks(rollbackTasks);
+        emit(state.copyWith(tasks: rollbackTasks, tasksGroup: rollbackGroup));
       }
     });
 
     on<ToggleWeeklyTask>((e, emit) async {
+      // Optimistic update: cập nhật UI ngay lập tức
+      final updatedTasks = state.tasks.map((task) {
+        if (task.id == e.id) {
+          return task.copyWith(isDone: e.isDone, updatedAt: DateTime.now());
+        }
+        return task;
+      }).toList();
+
+      final updatedGroup = WeeklyTasksGroup.fromTasks(updatedTasks);
+      emit(state.copyWith(tasks: updatedTasks, tasksGroup: updatedGroup));
+
+      // Sau đó gọi API để đồng bộ với database
       try {
         await repo.toggleDone(e.id, e.isDone);
-        // Force refresh sau khi toggle
-        add(const RefreshWeeklyTasks());
+        // print('WeeklyTaskBloc: Task toggled successfully');
       } catch (error) {
+        // Nếu API thất bại, rollback lại trạng thái cũ
         // print('Error toggling weekly task: $error');
+        final rollbackTasks = state.tasks.map((task) {
+          if (task.id == e.id) {
+            return task.copyWith(isDone: !e.isDone, updatedAt: DateTime.now());
+          }
+          return task;
+        }).toList();
+
+        final rollbackGroup = WeeklyTasksGroup.fromTasks(rollbackTasks);
+        emit(state.copyWith(tasks: rollbackTasks, tasksGroup: rollbackGroup));
       }
     });
 
     on<DeleteWeeklyTask>((e, emit) async {
+      // Lưu task để có thể rollback nếu cần
+      final taskToDelete = state.tasks.firstWhere((task) => task.id == e.id);
+
+      // Optimistic update: xóa task khỏi UI ngay lập tức
+      final updatedTasks = state.tasks
+          .where((task) => task.id != e.id)
+          .toList();
+      final updatedGroup = WeeklyTasksGroup.fromTasks(updatedTasks);
+      emit(state.copyWith(tasks: updatedTasks, tasksGroup: updatedGroup));
+
+      // Sau đó gọi API để xóa task thật
       try {
         // print('WeeklyTaskBloc: Deleting weekly task with id: ${e.id}');
         await repo.removeTask(e.id);
         print('WeeklyTaskBloc: Weekly task deleted successfully');
-
-        // Manually refresh tasks to ensure UI updates
-        add(const RefreshWeeklyTasks());
       } catch (error) {
+        // Nếu API thất bại, khôi phục lại task
         // print('Error deleting weekly task: $error');
+        final rollbackTasks = [...state.tasks, taskToDelete];
+        final rollbackGroup = WeeklyTasksGroup.fromTasks(rollbackTasks);
+        emit(state.copyWith(tasks: rollbackTasks, tasksGroup: rollbackGroup));
       }
     });
 
     on<UpdateWeeklyTask>((e, emit) async {
+      // Lưu task cũ để có thể rollback nếu cần
+      final oldTask = state.tasks.firstWhere((task) => task.id == e.id);
+
+      // Optimistic update: cập nhật UI ngay lập tức
+      final updatedTasks = state.tasks.map((task) {
+        if (task.id == e.id) {
+          return task.copyWith(
+            title: e.title ?? task.title,
+            note: e.note ?? task.note,
+            updatedAt: DateTime.now(),
+          );
+        }
+        return task;
+      }).toList();
+
+      final updatedGroup = WeeklyTasksGroup.fromTasks(updatedTasks);
+      emit(state.copyWith(tasks: updatedTasks, tasksGroup: updatedGroup));
+
+      // Sau đó gọi API để cập nhật task thật
       try {
         await repo.updateTask(id: e.id, title: e.title, note: e.note);
+        // print('WeeklyTaskBloc: Task updated successfully');
       } catch (error) {
+        // Nếu API thất bại, rollback lại trạng thái cũ
         // print('Error updating weekly task: $error');
+        final rollbackTasks = state.tasks.map((task) {
+          if (task.id == e.id) {
+            return oldTask;
+          }
+          return task;
+        }).toList();
+
+        final rollbackGroup = WeeklyTasksGroup.fromTasks(rollbackTasks);
+        emit(state.copyWith(tasks: rollbackTasks, tasksGroup: rollbackGroup));
       }
     });
 
     on<RefreshWeeklyTasks>((e, emit) async {
       try {
         // print('WeeklyTaskBloc: Refreshing weekly tasks manually');
-        final tasks = await repo.getCurrentWeekTasks(coupleId);
+        final tasks = await repo.getWeekTasks(coupleId, state.currentWeekStart);
         print('WeeklyTaskBloc: Refreshed ${tasks.length} weekly tasks');
         final group = WeeklyTasksGroup.fromTasks(tasks);
         emit(
@@ -139,6 +224,19 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
         // print('WeeklyTaskBloc: Changing to week ${e.weekStart}');
         await _sub?.cancel();
 
+        // Load data cho tuần mới ngay lập tức
+        final tasks = await repo.getWeekTasks(coupleId, e.weekStart);
+        final group = WeeklyTasksGroup.fromTasks(tasks);
+        emit(
+          state.copyWith(
+            currentWeekStart: e.weekStart,
+            tasks: tasks,
+            tasksGroup: group,
+            status: WeeklyTaskStatus.ready,
+          ),
+        );
+
+        // Setup stream cho tuần mới
         _sub = repo
             .watchWeekTasks(coupleId, e.weekStart)
             .listen(
@@ -147,8 +245,6 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
                 // print('WeeklyTaskBloc Stream error: $error');
               },
             );
-
-        emit(state.copyWith(currentWeekStart: e.weekStart));
       } catch (error) {
         // print('Error changing week: $error');
       }
@@ -172,6 +268,13 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
     });
 
     add(WeeklyTaskEvent.bind());
+  }
+
+  // Helper method để lấy tuần hiện tại
+  DateTime _getCurrentWeekStart() {
+    final now = DateTime.now();
+    final weekday = now.weekday;
+    return now.subtract(Duration(days: weekday - 1));
   }
 
   @override
