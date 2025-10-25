@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'couple_repository.dart';
 
 class PairingPage extends StatefulWidget {
-  const PairingPage({super.key});
+  final VoidCallback? onPairingSuccess;
+
+  const PairingPage({super.key, this.onPairingSuccess});
 
   @override
   State<PairingPage> createState() => _PairingPageState();
@@ -22,7 +23,7 @@ class _PairingPageState extends State<PairingPage> {
     try {
       final code = await repo.createCouple();
       setState(() => myCode = code);
-      
+
       // Lắng nghe real-time để biết khi có người join
       _listenForNewMember(code);
     } catch (e) {
@@ -52,11 +53,13 @@ class _PairingPageState extends State<PairingPage> {
             ),
             callback: (payload) {
               debugPrint('[PairingPage] New member joined: $payload');
-              // Khi có người join, chuyển đến trang home
+              // Khi có người join, thông báo cho MainNavigation
               if (mounted) {
                 _toast('Partner đã join! Chuyển đến trang chính...');
                 Future.delayed(const Duration(seconds: 1), () {
-                  if (mounted) context.go('/home');
+                  if (mounted) {
+                    widget.onPairingSuccess?.call();
+                  }
                 });
               }
             },
@@ -71,7 +74,14 @@ class _PairingPageState extends State<PairingPage> {
     setState(() => loading = true);
     try {
       final _ = await repo.joinByCode(codeCtrl.text.trim().toUpperCase());
-      if (mounted) context.go('/home');
+      if (mounted) {
+        _toast('Join thành công! Chuyển đến trang chính...');
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            widget.onPairingSuccess?.call();
+          }
+        });
+      }
     } catch (e) {
       _toast(e.toString());
     } finally {
@@ -102,11 +112,20 @@ class _PairingPageState extends State<PairingPage> {
             const Text('Bước 1: Một người tạo mã (Create).'),
             const Text('Bước 2: Người kia nhập mã (Join).'),
             const SizedBox(height: 16),
-            FilledButton(onPressed: loading ? null : _create, child: const Text('Create couple code')),
+            FilledButton(
+              onPressed: loading ? null : _create,
+              child: const Text('Create couple code'),
+            ),
             if (myCode != null) ...[
               const SizedBox(height: 8),
-              SelectableText('Your code: ', style: Theme.of(context).textTheme.titleMedium),
-              SelectableText(myCode!, style: Theme.of(context).textTheme.displaySmall),
+              SelectableText(
+                'Your code: ',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              SelectableText(
+                myCode!,
+                style: Theme.of(context).textTheme.displaySmall,
+              ),
               const Text('Gửi mã này cho partner để họ Join.'),
               const SizedBox(height: 16),
             ],
@@ -118,7 +137,10 @@ class _PairingPageState extends State<PairingPage> {
               decoration: const InputDecoration(labelText: 'Enter couple code'),
             ),
             const SizedBox(height: 8),
-            FilledButton(onPressed: loading ? null : _join, child: const Text('Join couple')),
+            FilledButton(
+              onPressed: loading ? null : _join,
+              child: const Text('Join couple'),
+            ),
           ],
         ),
       ),

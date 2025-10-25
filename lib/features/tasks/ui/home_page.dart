@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../couple/couple_repository.dart';
 import '../data/weekly_task_repository.dart';
 import '../data/weekly_task.dart';
 import '../logic/weekly_task_bloc.dart';
@@ -11,7 +10,9 @@ import 'components/weekly_tasks_list.dart';
 import 'components/day_tabs.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final String coupleId;
+
+  const HomePage({super.key, required this.coupleId});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -19,21 +20,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final inputCtrl = TextEditingController();
-  String? coupleId;
   int? selectedDayOfWeek;
   bool isExpanded =
       true; // true = hiển thị tất cả ngày, false = tập trung vào ngày được chọn
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final id = await CoupleRepository().myCoupleId();
-    setState(() => coupleId = id);
-  }
 
   void _onDaySelected(int? day) {
     setState(() {
@@ -91,13 +80,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (coupleId == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return BlocProvider(
-      create: (_) =>
-          WeeklyTaskBloc(repo: WeeklyTaskRepository(), coupleId: coupleId!),
+      create: (_) => WeeklyTaskBloc(
+        repo: WeeklyTaskRepository(),
+        coupleId: widget.coupleId,
+      ),
       child: Scaffold(
         appBar: const HomeAppBar(),
         body: Column(

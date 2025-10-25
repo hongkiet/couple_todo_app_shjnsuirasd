@@ -97,4 +97,26 @@ class CoupleRepository {
       return null;
     }
   }
+
+  Future<void> unpairCouple() async {
+    final userId = _supa.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not logged in.');
+
+    try {
+      // Lấy couple_id trước khi xóa
+      final coupleId = await myCoupleId();
+      if (coupleId == null) return;
+
+      // Xóa user khỏi couple_members
+      await _supa.from('couple_members').delete().eq('user_id', userId);
+
+      // Xóa luôn couple và tất cả dữ liệu liên quan
+      await _supa.from('couples').delete().eq('id', coupleId);
+
+      debugPrint('[unpairCouple] Successfully deleted couple');
+    } catch (e) {
+      debugPrint('[unpairCouple] Error: $e');
+      rethrow;
+    }
+  }
 }

@@ -70,9 +70,9 @@ class _RouteDecider extends StatelessWidget {
 
         if (snapshot.hasError) {
           debugPrint('[AuthGate] FutureBuilder error: ${snapshot.error}');
-          // Nếu có lỗi, chuyển về pairing page
+          // Nếu có lỗi, chuyển về main navigation (sẽ hiển thị PairingPage nếu chưa có couple)
           WidgetsBinding.instance.addPostFrameCallback(
-            (_) => context.go('/pair'),
+            (_) => context.go('/main'),
           );
           return const SizedBox.shrink();
         }
@@ -83,15 +83,10 @@ class _RouteDecider extends StatelessWidget {
           );
         }
 
-        if (snapshot.data == true) {
-          WidgetsBinding.instance.addPostFrameCallback(
-            (_) => context.go('/home'),
-          );
-        } else {
-          WidgetsBinding.instance.addPostFrameCallback(
-            (_) => context.go('/pair'),
-          );
-        }
+        // Luôn chuyển đến /main, MainNavigation sẽ tự động xử lý việc hiển thị PairingPage nếu chưa có couple
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => context.go('/main'),
+        );
         return const SizedBox.shrink();
       },
     );
