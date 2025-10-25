@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../core/theme.dart';
 import '../features/auth/auth_gate.dart';
 import '../features/tasks/ui/home_page.dart';
 import '../features/couple/pairing_page.dart';
@@ -20,7 +21,7 @@ class App extends StatelessWidget {
     return MaterialApp.router(
       title: 'Couple To-Do',
       routerConfig: _router,
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.pink),
+      theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
     );
   }
