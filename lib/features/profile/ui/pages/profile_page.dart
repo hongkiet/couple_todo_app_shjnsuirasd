@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../couple/couple_repository.dart';
+import '../../../couple/couple_repository.dart';
 
 class ProfilePage extends StatefulWidget {
   final VoidCallback? onUnpairSuccess;
@@ -19,12 +20,51 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = true;
   String _selectedLanguage = 'VN';
   ThemeMode _themeMode = ThemeMode.system;
+  RealtimeChannel? _membershipChannel;
+  StreamSubscription<List<dynamic>>? _membershipSub;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadSettings();
+    _subscribeMembershipChanges();
+  }
+
+  void _subscribeMembershipChanges() {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    // 1) Stream-based listener (khuyến nghị): không phụ thuộc Publication
+    _membershipSub = Supabase.instance.client
+        .from('couple_members')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId)
+        .listen((_) async {
+      if (mounted) {
+        await _loadUserData();
+      }
+    });
+
+    // 2) Realtime fallback (nếu đã bật Publication)
+    _membershipChannel = Supabase.instance.client
+        .channel('profile_membership_$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'couple_members',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (_) async {
+            if (mounted) {
+              await _loadUserData();
+            }
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _loadUserData() async {
@@ -40,6 +80,11 @@ class _ProfilePageState extends State<ProfilePage> {
             .single();
         setState(() {
           _coupleCode = response['code'];
+        });
+      } else {
+        // Không còn couple → clear UI
+        setState(() {
+          _coupleCode = null;
         });
       }
     } catch (e) {
@@ -118,7 +163,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('Đã rời khỏi cặp đôi')));
-          // Refresh dữ liệu couple trong ProfilePage
+          // Refresh dữ liệu couple trong ProfilePage (sẽ còn được realtime đẩy nữa)
           await _loadUserData();
           // Gọi callback để MainNavigation refresh
           widget.onUnpairSuccess?.call();
@@ -350,6 +395,13 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _membershipChannel?.unsubscribe();
+    _membershipSub?.cancel();
+    super.dispose();
   }
 
   Widget _buildSection({

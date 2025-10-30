@@ -61,7 +61,10 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
           .where((task) => !task.id.startsWith('temp_'))
           .toList();
 
-      final group = WeeklyTasksGroup.fromTasks(realTasks);
+      final group = WeeklyTasksGroup.fromTasks(
+        realTasks,
+        weekStart: state.currentWeekStart,
+      );
       emit(
         state.copyWith(
           tasks: realTasks,
@@ -90,7 +93,10 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
 
       // Thêm task tạm thời vào UI ngay lập tức
       final updatedTasks = [...state.tasks, tempTask];
-      final updatedGroup = WeeklyTasksGroup.fromTasks(updatedTasks);
+      final updatedGroup = WeeklyTasksGroup.fromTasks(
+        updatedTasks,
+        weekStart: state.currentWeekStart,
+      );
       emit(state.copyWith(tasks: updatedTasks, tasksGroup: updatedGroup));
 
       // Sau đó gọi API để thêm task thật
@@ -132,13 +138,18 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
         return task;
       }).toList();
 
-      final updatedGroup = WeeklyTasksGroup.fromTasks(updatedTasks);
+      final updatedGroup = WeeklyTasksGroup.fromTasks(
+        updatedTasks,
+        weekStart: state.currentWeekStart,
+      );
       emit(state.copyWith(tasks: updatedTasks, tasksGroup: updatedGroup));
 
       // Sau đó gọi API để đồng bộ với database
       try {
         await repo.toggleDone(e.id, e.isDone);
         // print('WeeklyTaskBloc: Task toggled successfully');
+        // Đảm bảo đồng bộ lại toàn bộ danh sách ngay sau khi thao tác
+        add(const RefreshWeeklyTasks());
       } catch (error) {
         // Nếu API thất bại, rollback lại trạng thái cũ
         // print('Error toggling weekly task: $error');
@@ -162,7 +173,10 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
       final updatedTasks = state.tasks
           .where((task) => task.id != e.id)
           .toList();
-      final updatedGroup = WeeklyTasksGroup.fromTasks(updatedTasks);
+      final updatedGroup = WeeklyTasksGroup.fromTasks(
+        updatedTasks,
+        weekStart: state.currentWeekStart,
+      );
       emit(state.copyWith(tasks: updatedTasks, tasksGroup: updatedGroup));
 
       // Sau đó gọi API để xóa task thật
@@ -170,11 +184,16 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
         // print('WeeklyTaskBloc: Deleting weekly task with id: ${e.id}');
         await repo.removeTask(e.id);
         print('WeeklyTaskBloc: Weekly task deleted successfully');
+        // Đồng bộ lại dữ liệu sau khi xóa
+        add(const RefreshWeeklyTasks());
       } catch (error) {
         // Nếu API thất bại, khôi phục lại task
         // print('Error deleting weekly task: $error');
         final rollbackTasks = [...state.tasks, taskToDelete];
-        final rollbackGroup = WeeklyTasksGroup.fromTasks(rollbackTasks);
+        final rollbackGroup = WeeklyTasksGroup.fromTasks(
+          rollbackTasks,
+          weekStart: state.currentWeekStart,
+        );
         emit(state.copyWith(tasks: rollbackTasks, tasksGroup: rollbackGroup));
       }
     });
@@ -195,13 +214,18 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
         return task;
       }).toList();
 
-      final updatedGroup = WeeklyTasksGroup.fromTasks(updatedTasks);
+      final updatedGroup = WeeklyTasksGroup.fromTasks(
+        updatedTasks,
+        weekStart: state.currentWeekStart,
+      );
       emit(state.copyWith(tasks: updatedTasks, tasksGroup: updatedGroup));
 
       // Sau đó gọi API để cập nhật task thật
       try {
         await repo.updateTask(id: e.id, title: e.title, note: e.note);
         // print('WeeklyTaskBloc: Task updated successfully');
+        // Đồng bộ lại dữ liệu sau khi cập nhật
+        add(const RefreshWeeklyTasks());
       } catch (error) {
         // Nếu API thất bại, rollback lại trạng thái cũ
         // print('Error updating weekly task: $error');
@@ -212,7 +236,10 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
           return task;
         }).toList();
 
-        final rollbackGroup = WeeklyTasksGroup.fromTasks(rollbackTasks);
+        final rollbackGroup = WeeklyTasksGroup.fromTasks(
+          rollbackTasks,
+          weekStart: state.currentWeekStart,
+        );
         emit(state.copyWith(tasks: rollbackTasks, tasksGroup: rollbackGroup));
       }
     });
@@ -228,7 +255,10 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
             .where((task) => !task.id.startsWith('temp_'))
             .toList();
 
-        final group = WeeklyTasksGroup.fromTasks(realTasks);
+        final group = WeeklyTasksGroup.fromTasks(
+          realTasks,
+          weekStart: state.currentWeekStart,
+        );
         emit(
           state.copyWith(
             tasks: realTasks,
@@ -254,7 +284,10 @@ class WeeklyTaskBloc extends Bloc<WeeklyTaskEvent, WeeklyTaskState> {
             .where((task) => !task.id.startsWith('temp_'))
             .toList();
 
-        final group = WeeklyTasksGroup.fromTasks(realTasks);
+        final group = WeeklyTasksGroup.fromTasks(
+          realTasks,
+          weekStart: e.weekStart,
+        );
         emit(
           state.copyWith(
             currentWeekStart: e.weekStart,

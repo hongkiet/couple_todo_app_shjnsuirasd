@@ -44,11 +44,9 @@ class _RouteDecider extends StatelessWidget {
   Future<bool> _hasCouple() async {
     try {
       final supa = Supabase.instance.client;
-      final response = await supa
-          .from('couple_members')
-          .select('couple_id')
-          .limit(1);
-      return (response.isNotEmpty);
+      // Sử dụng RPC function để tránh infinite recursion trong RLS policy
+      final response = await supa.rpc('has_couple');
+      return response as bool? ?? false;
     } catch (e) {
       // Log error để debug
       debugPrint('[AuthGate] Error checking couple: $e');

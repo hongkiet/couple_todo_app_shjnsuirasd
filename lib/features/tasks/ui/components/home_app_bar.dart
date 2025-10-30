@@ -18,13 +18,13 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               context.read<WeeklyTaskBloc>().add(const RefreshWeeklyTasks()),
           tooltip: 'Refresh',
         ),
-        IconButton(
-          icon: const Icon(Icons.logout),
-          onPressed: () async {
-            await Supabase.instance.client.auth.signOut();
-            if (context.mounted) context.go('/');
-          },
-        ),
+        // IconButton(
+        //   icon: const Icon(Icons.logout),
+        //   onPressed: () async {
+        //     await Supabase.instance.client.auth.signOut();
+        //     if (context.mounted) context.go('/');
+        //   },
+        // ),
       ],
     );
   }

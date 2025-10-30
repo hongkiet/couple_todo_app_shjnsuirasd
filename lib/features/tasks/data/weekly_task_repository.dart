@@ -6,6 +6,9 @@ class WeeklyTaskRepository {
 
   // Lấy tasks của tuần hiện tại
   Stream<List<WeeklyTask>> watchCurrentWeekTasks(String coupleId) {
+    final weekStart = _getCurrentWeekStart();
+    // final weekEnd = _getCurrentWeekEnd();
+    // Stream theo couple và lọc theo tuần ở client để tương thích SDK
     return _supa
         .from('weekly_tasks')
         .stream(primaryKey: ['id'])
@@ -13,34 +16,19 @@ class WeeklyTaskRepository {
         .order('day_of_week', ascending: true)
         .order('created_at', ascending: true)
         .map((rows) {
-          final weekStart = _getCurrentWeekStart();
-          print('WeeklyTaskRepository: Current week start: $weekStart');
-          print(
-            'WeeklyTaskRepository: Received ${rows.length} rows from stream',
-          );
-
-          final filteredRows = rows.where((row) {
+          final filtered = rows.where((row) {
             final taskWeekStart = DateTime.parse(row['week_start'] as String);
-            // So sánh theo ngày thay vì moment để tránh vấn đề timezone
-            final isMatch =
-                taskWeekStart.year == weekStart.year &&
+            return taskWeekStart.year == weekStart.year &&
                 taskWeekStart.month == weekStart.month &&
                 taskWeekStart.day == weekStart.day;
-            print(
-              'WeeklyTaskRepository: Task week start: $taskWeekStart, Current week start: $weekStart, Match: $isMatch',
-            );
-            return isMatch;
           }).toList();
-
-          print(
-            'WeeklyTaskRepository: Filtered to ${filteredRows.length} tasks',
-          );
-          return filteredRows.map((e) => WeeklyTask.fromMap(e)).toList();
+          return filtered.map((e) => WeeklyTask.fromMap(e)).toList();
         });
   }
 
   // Lấy tasks của một tuần cụ thể
   Stream<List<WeeklyTask>> watchWeekTasks(String coupleId, DateTime weekStart) {
+
     return _supa
         .from('weekly_tasks')
         .stream(primaryKey: ['id'])
@@ -48,26 +36,13 @@ class WeeklyTaskRepository {
         .order('day_of_week', ascending: true)
         .order('created_at', ascending: true)
         .map((rows) {
-          print(
-            'WeeklyTaskRepository: watchWeekTasks - Received ${rows.length} rows',
-          );
-          return rows
-              .where((row) {
-                final taskWeekStart = DateTime.parse(
-                  row['week_start'] as String,
-                );
-                // So sánh theo ngày thay vì moment để tránh vấn đề timezone
-                final isMatch =
-                    taskWeekStart.year == weekStart.year &&
-                    taskWeekStart.month == weekStart.month &&
-                    taskWeekStart.day == weekStart.day;
-                print(
-                  'WeeklyTaskRepository: watchWeekTasks - Task week start: $taskWeekStart, Target week start: $weekStart, Match: $isMatch',
-                );
-                return isMatch;
-              })
-              .map((e) => WeeklyTask.fromMap(e))
-              .toList();
+          final filtered = rows.where((row) {
+            final taskWeekStart = DateTime.parse(row['week_start'] as String);
+            return taskWeekStart.year == weekStart.year &&
+                taskWeekStart.month == weekStart.month &&
+                taskWeekStart.day == weekStart.day;
+          }).toList();
+          return filtered.map((e) => WeeklyTask.fromMap(e)).toList();
         });
   }
 

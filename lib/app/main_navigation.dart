@@ -1,9 +1,10 @@
-import 'package:couple_todo_app_shjn/features/couple/couple_page.dart';
+import 'package:couple_todo_app_shjn/features/couple/ui/pages/couple_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../features/tasks/ui/home_page.dart';
 import '../features/progress/progress_page.dart';
-import '../features/profile/profile_page.dart';
-import '../features/couple/pairing_page.dart';
+import '../features/profile/ui/pages/profile_page.dart';
+import '../features/couple/ui/pages/pairing_page.dart';
 import '../features/couple/couple_repository.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -17,38 +18,58 @@ class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
   String? coupleId;
   bool isLoading = true;
+  bool isCoupleComplete = false;
 
   @override
   void initState() {
     super.initState();
-    _loadCoupleId();
+    _loadCoupleData();
   }
 
-  Future<void> _loadCoupleId() async {
+  Future<void> _loadCoupleData() async {
     try {
-      final id = await CoupleRepository().myCoupleId();
-      setState(() {
-        coupleId = id;
-        isLoading = false;
-      });
+      final repo = CoupleRepository();
+      final id = await repo.myCoupleId();
+      final isComplete = id != null ? await repo.isCoupleComplete() : false;
+      
+      debugPrint('[MainNavigation] Loaded coupleId: $id, isComplete: $isComplete');
+      if (mounted) {
+        setState(() {
+          coupleId = id;
+          isCoupleComplete = isComplete;
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        coupleId = null;
-        isLoading = false;
-      });
+      debugPrint('[MainNavigation] Error loading coupleData: $e');
+      if (mounted) {
+        setState(() {
+          coupleId = null;
+          isCoupleComplete = false;
+          isLoading = false;
+        });
+      }
     }
   }
 
+
   void _onPairingSuccess() {
-    _loadCoupleId();
+    debugPrint('[MainNavigation] onPairingSuccess called');
+    // Đợi một chút để đảm bảo DB đã sync
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _loadCoupleData();
+    });
   }
 
   void _onUnpairSuccess() {
-    _loadCoupleId();
+    _loadCoupleData();
   }
 
   List<Widget> get _pages {
-    if (coupleId == null) {
+    debugPrint('[MainNavigation] _pages getter called, coupleId: $coupleId, isComplete: $isCoupleComplete');
+    // Chỉ vào HomePage khi có coupleId VÀ couple đã hoàn chỉnh (có 2 members)
+    if (coupleId == null || !isCoupleComplete) {
+      debugPrint('[MainNavigation] Returning PairingPage');
       return [
         PairingPage(onPairingSuccess: _onPairingSuccess),
         const CouplePage(),
@@ -57,6 +78,7 @@ class _MainNavigationState extends State<MainNavigation> {
       ];
     }
 
+    debugPrint('[MainNavigation] Returning HomePage');
     return [
       HomePage(coupleId: coupleId!),
       const CouplePage(),

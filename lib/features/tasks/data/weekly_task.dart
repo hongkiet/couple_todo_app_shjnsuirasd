@@ -129,20 +129,22 @@ class WeeklyTasksGroup {
     required this.tasksByDay,
   });
 
-  factory WeeklyTasksGroup.fromTasks(List<WeeklyTask> tasks) {
+  factory WeeklyTasksGroup.fromTasks(
+    List<WeeklyTask> tasks, {
+    DateTime? weekStart,
+  }) {
     if (tasks.isEmpty) {
-      final now = DateTime.now();
-      final weekStart = _getWeekStart(now);
-      final weekEnd = weekStart.add(const Duration(days: 6));
+      final ws = weekStart ?? _getWeekStart(DateTime.now());
+      final weekEnd = ws.add(const Duration(days: 6));
       return WeeklyTasksGroup(
-        weekStart: weekStart,
+        weekStart: ws,
         weekEnd: weekEnd,
         tasksByDay: {},
       );
     }
 
     final firstTask = tasks.first;
-    final weekStart = firstTask.weekStart;
+    final ws = weekStart ?? firstTask.weekStart;
     final weekEnd = firstTask.weekEnd;
 
     final tasksByDay = <int, List<WeeklyTask>>{};
@@ -151,7 +153,7 @@ class WeeklyTasksGroup {
     }
 
     return WeeklyTasksGroup(
-      weekStart: weekStart,
+      weekStart: ws,
       weekEnd: weekEnd,
       tasksByDay: tasksByDay,
     );

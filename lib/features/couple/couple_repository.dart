@@ -73,14 +73,13 @@ class CoupleRepository {
 
   Future<String?> myCoupleId() async {
     try {
-      final response = await _supa
-          .from('couple_members')
-          .select('couple_id')
-          .limit(1)
-          .maybeSingle();
-      return response?['couple_id'] as String?;
+      // Sử dụng RPC function để tránh infinite recursion trong RLS policy
+      final response = await _supa.rpc('get_my_couple_id');
+      return response as String?;
     } catch (e) {
-      rethrow;
+      debugPrint('[myCoupleId] Error: $e');
+      // Nếu lỗi, trả về null thay vì throw để UI có thể xử lý
+      return null;
     }
   }
 
@@ -103,20 +102,30 @@ class CoupleRepository {
     if (userId == null) throw Exception('User not logged in.');
 
     try {
-      // Lấy couple_id trước khi xóa
-      final coupleId = await myCoupleId();
-      if (coupleId == null) return;
-
-      // Xóa user khỏi couple_members
-      await _supa.from('couple_members').delete().eq('user_id', userId);
-
-      // Xóa luôn couple và tất cả dữ liệu liên quan
-      await _supa.from('couples').delete().eq('id', coupleId);
-
-      debugPrint('[unpairCouple] Successfully deleted couple');
+      // Sử dụng RPC function để tránh infinite recursion trong RLS policy
+      await _supa.rpc('leave_couple');
+      debugPrint('[unpairCouple] Successfully left couple');
     } catch (e) {
       debugPrint('[unpairCouple] Error: $e');
       rethrow;
+    }
+  }
+
+  /// Kiểm tra xem couple đã có đủ 2 members chưa
+  Future<bool> isCoupleComplete() async {
+    try {
+      final coupleId = await myCoupleId();
+      if (coupleId == null) return false;
+      
+      // Sử dụng RPC function để tránh infinite recursion trong RLS policy
+      final response = await _supa.rpc('is_couple_complete', params: {
+        'p_couple_id': coupleId,
+      });
+      
+      return response as bool? ?? false;
+    } catch (e) {
+      debugPrint('[isCoupleComplete] Error: $e');
+      return false;
     }
   }
 }

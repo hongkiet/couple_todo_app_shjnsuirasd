@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../data/weekly_task_repository.dart';
@@ -22,26 +24,25 @@ class _HomePageState extends State<HomePage> {
   final inputCtrl = TextEditingController();
   int? selectedDayOfWeek;
   bool isExpanded =
-      true; // true = hiển thị tất cả ngày, false = tập trung vào ngày được chọn
+      true;
 
   void _onDaySelected(int? day) {
     setState(() {
       selectedDayOfWeek = day;
       if (day != null) {
         isExpanded =
-            false; // Tự động chuyển sang chế độ tập trung khi chọn ngày
+            false;
       }
     });
   }
 
   void _toggleExpand() {
-    // Chỉ cho phép toggle khi có ngày được chọn
     if (selectedDayOfWeek == null) return;
 
     setState(() {
       isExpanded = !isExpanded;
       if (isExpanded) {
-        selectedDayOfWeek = null; // Reset selection khi expand
+        selectedDayOfWeek = null; 
       }
     });
   }
@@ -78,6 +79,18 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _onRefresh(BuildContext context) async {
+    final completer = Completer<void>();
+    final sub = context.read<WeeklyTaskBloc>().stream.listen((state) {
+      if (state.status == WeeklyTaskStatus.ready) {
+        completer.complete();
+      }
+    });
+    context.read<WeeklyTaskBloc>().add(const RefreshWeeklyTasks());
+    await completer.future.timeout(const Duration(seconds: 3), onTimeout: () {});
+    await sub.cancel();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -104,24 +117,27 @@ class _HomePageState extends State<HomePage> {
             ),
             const Divider(height: 0),
             Expanded(
-              child: BlocBuilder<WeeklyTaskBloc, WeeklyTaskState>(
-                builder: (context, state) {
-                  if (state.status == WeeklyTaskStatus.loading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (state.tasksGroup == null ||
-                      state.tasksGroup!.totalTasks == 0) {
-                    return const Center(
-                      child: Text('Chưa có task nào trong tuần này.'),
+              child: RefreshIndicator(
+                onRefresh: () => _onRefresh(context),
+                child: BlocBuilder<WeeklyTaskBloc, WeeklyTaskState>(
+                  builder: (context, state) {
+                    if (state.status == WeeklyTaskStatus.loading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+              
+                    if (state.tasksGroup == null ||
+                        state.tasksGroup!.totalTasks == 0) {
+                      return const Center(
+                        child: Text('Chưa có task nào trong tuần này.'),
+                      );
+                    }
+              
+                    return WeeklyTasksList(
+                      tasksGroup: state.tasksGroup!,
+                      selectedDay: isExpanded ? null : selectedDayOfWeek,
                     );
-                  }
-
-                  return WeeklyTasksList(
-                    tasksGroup: state.tasksGroup!,
-                    selectedDay: isExpanded ? null : selectedDayOfWeek,
-                  );
-                },
+                  },
+                ),
               ),
             ),
           ],
