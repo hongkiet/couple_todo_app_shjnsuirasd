@@ -18,6 +18,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final _coupleRepo = CoupleRepository();
   String? _coupleCode;
   bool _isLoading = true;
+  bool _isOwner = false;
   String _selectedLanguage = 'VN';
   ThemeMode _themeMode = ThemeMode.system;
   RealtimeChannel? _membershipChannel;
@@ -41,10 +42,10 @@ class _ProfilePageState extends State<ProfilePage> {
         .stream(primaryKey: ['id'])
         .eq('user_id', userId)
         .listen((_) async {
-      if (mounted) {
-        await _loadUserData();
-      }
-    });
+          if (mounted) {
+            await _loadUserData();
+          }
+        });
 
     // 2) Realtime fallback (nếu đã bật Publication)
     _membershipChannel = Supabase.instance.client
@@ -69,22 +70,33 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadUserData() async {
     try {
-      // Lấy thông tin couple
       final coupleId = await _coupleRepo.myCoupleId();
-      if (coupleId != null) {
-        // Lấy mã couple từ database
-        final response = await Supabase.instance.client
+      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+      if (coupleId != null && currentUserId != null) {
+        // Lấy code từ bảng couples
+        final coupleResponse = await Supabase.instance.client
             .from('couples')
             .select('code')
             .eq('id', coupleId)
             .single();
+
+        // Kiểm tra role owner từ bảng couple_members
+        final memberResponse = await Supabase.instance.client
+            .from('couple_members')
+            .select('role')
+            .eq('couple_id', coupleId)
+            .eq('user_id', currentUserId)
+            .maybeSingle();
+
         setState(() {
-          _coupleCode = response['code'];
+          _coupleCode = coupleResponse['code'] as String?;
+          _isOwner = memberResponse?['role'] == 'owner';
         });
       } else {
-        // Không còn couple → clear UI
         setState(() {
           _coupleCode = null;
+          _isOwner = false;
         });
       }
     } catch (e) {
@@ -210,6 +222,77 @@ class _ProfilePageState extends State<ProfilePage> {
           ).showSnackBar(SnackBar(content: Text('Lỗi đăng xuất: $e')));
         }
       }
+    }
+  }
+
+  Future<void> _hardDeleteCouple() async {
+    // Cảnh báo mạnh + yêu cầu xác nhận
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController();
+        return AlertDialog(
+          title: const Text('Xóa vĩnh viễn cặp đôi'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '⚠️ Thao tác KHÔNG THỂ HOÀN TÁC.\n'
+                'Toàn bộ tasks, lịch sử, thành viên sẽ bị xóa.\n\n'
+                'Nhập DELETE để xác nhận.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Nhập DELETE',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).pop(controller.text.trim().toUpperCase() == 'DELETE');
+              },
+              child: const Text('Xóa vĩnh viễn'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _coupleRepo.hardDeleteCoupleForOwner();
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Đã xóa vĩnh viễn cặp đôi')));
+
+      // Làm mới dữ liệu tại trang Profile
+      await _loadUserData();
+
+      // Thông báo cho MainNavigation làm mới (nếu cần)
+      widget.onUnpairSuccess?.call();
+
+      // Option: điều hướng về trạng thái không có cặp đôi
+      // context.go('/'); // nếu bạn muốn
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Lỗi xóa vĩnh viễn: $e')));
     }
   }
 
@@ -365,6 +448,21 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   ),
+                  if (_isOwner) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _hardDeleteCouple,
+                        icon: const Icon(Icons.delete_forever),
+                        label: const Text('Xóa vĩnh viễn cặp đôi (owner)'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                        ),
+                      ),
+                    ),
+                  ],
                 ] else ...[
                   const ListTile(
                     leading: Icon(Icons.favorite_border),

@@ -116,16 +116,45 @@ class CoupleRepository {
     try {
       final coupleId = await myCoupleId();
       if (coupleId == null) return false;
-      
+
       // Sử dụng RPC function để tránh infinite recursion trong RLS policy
-      final response = await _supa.rpc('is_couple_complete', params: {
-        'p_couple_id': coupleId,
-      });
-      
+      final response = await _supa.rpc(
+        'is_couple_complete',
+        params: {'p_couple_id': coupleId},
+      );
+
       return response as bool? ?? false;
     } catch (e) {
       debugPrint('[isCoupleComplete] Error: $e');
       return false;
     }
+  }
+
+  Future<void> hardDeleteCoupleForOwner() async {
+    final client = Supabase.instance.client;
+    final currentUserId = client.auth.currentUser?.id;
+    if (currentUserId == null) {
+      throw Exception('Chưa đăng nhập');
+    }
+
+    final coupleId = await myCoupleId();
+    if (coupleId == null) {
+      throw Exception('Không tìm thấy couple');
+    }
+
+    // Kiểm tra role owner từ couple_members
+    final member = await client
+        .from('couple_members')
+        .select('role')
+        .eq('couple_id', coupleId)
+        .eq('user_id', currentUserId)
+        .maybeSingle();
+
+    if (member == null || member['role'] != 'owner') {
+      throw Exception('Chỉ owner mới có quyền xóa vĩnh viễn');
+    }
+
+    // Gọi RPC để xóa trong transaction
+    await client.rpc('hard_delete_couple', params: {'p_couple_id': coupleId});
   }
 }

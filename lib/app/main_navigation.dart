@@ -1,6 +1,5 @@
 import 'package:couple_todo_app_shjn/features/couple/ui/pages/couple_page.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../features/tasks/ui/home_page.dart';
 import '../features/progress/progress_page.dart';
 import '../features/profile/ui/pages/profile_page.dart';
